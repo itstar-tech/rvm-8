@@ -111,6 +111,12 @@ typedef struct {
     uint8_t cycles;
 } Instruction;
 
+
+extern Instruction instruction_table[256];
+
+uint8_t mem_read(CPU *cpu, uint16_t addr);
+void mem_write(CPU *cpu, uint16_t addr, uint8_t val);
+
 /*
  *
  *  Flags ------------
@@ -186,5 +192,7 @@ uint8_t mem_read(CPU *cpu, uint16_t addr);
  * @param val Byte value to write.
  */
 void mem_write(CPU *cpu, uint16_t addr, uint8_t val);
+
+void init_instruction_table(void);
 
 #endif

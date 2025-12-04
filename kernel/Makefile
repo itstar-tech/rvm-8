@@ -2,7 +2,7 @@ CC = gcc
 
 CFLAGS = -Wall -O2 -fPIC
 
-SOURCES = cpu.c
+SOURCES = cpu.c opcodes.c
 OBJS = $(SOURCES:.c=.o)
 
 all: libkernel.a
