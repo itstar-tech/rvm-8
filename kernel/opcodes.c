@@ -50,6 +50,14 @@ uint16_t addr_absolute(CPU *cpu) {
   return (hi << 8) | lo;
 }
 
+uint8_t lsr_op(CPU *cpu, uint8_t val) {
+  cpu->flags = val & 0x01 ? (cpu->flags | FLAG_C) : (cpu->flags & ~FLAG_C);
+  val >>= 1;
+  cpu->flags = val == 0 ? (cpu->flags | FLAG_Z) : (cpu->flags & ~FLAG_Z);
+  cpu->flags &= ~(FLAG_N);
+  return val;
+}
+
 /**
  * @brief Handles the LDA (Load Accumulator) instruction.
  *
@@ -69,22 +77,22 @@ uint8_t handler_lda(CPU *cpu, AddressingMode mode) {
   case MODE_IMMEDIATE:
     addr = addr_immediate(cpu);
     value = mem_read(cpu, addr);
-    cycles_used = 2;
+    cycles_used += 2;
     break;
   case MODE_ZEROPAGE:
     addr = addr_zeropage(cpu);
     value = mem_read(cpu, addr);
-    cycles_used = 3;
+    cycles_used += 3;
     break;
   case MODE_ABSOLUTE:
     addr = addr_absolute(cpu);
     value = mem_read(cpu, addr);
-    cycles_used = 4;
+    cycles_used += 4;
     break;
   case MODE_ZEROPAGE_X:
     addr = (addr_zeropage(cpu) + cpu->x) & 0xFF;
     value = mem_read(cpu, addr);
-    cycles_used = 4;
+    cycles_used += 4;
     break;
   case MODE_ABSOLUTE_X: {
     uint16_t base_addr = addr_absolute(cpu);
@@ -160,26 +168,90 @@ uint8_t handler_lda(CPU *cpu, AddressingMode mode) {
 uint8_t handler_ldx(CPU *cpu, AddressingMode mode) {
   uint16_t addr;
   uint8_t value;
+  uint8_t cycles_used = 0;
+
   switch (mode) {
   case MODE_IMMEDIATE:
     addr = addr_immediate(cpu);
     value = mem_read(cpu, addr);
+      cycles_used += 2;
     break;
   case MODE_ZEROPAGE:
     addr = addr_zeropage(cpu);
     value = mem_read(cpu, addr);
+      cycles_used += 3;
     break;
   case MODE_ABSOLUTE:
     addr = addr_absolute(cpu);
     value = mem_read(cpu, addr);
+    cycles_used += 3;
     break;
+  case MODE_ZEROPAGE_Y:
+      addr = (addr_zeropage(cpu) + cpu->y) & 0xFF;
+      value = mem_read(cpu, addr);
+      cycles_used += 4;
+      break;
+  case MODE_ABSOLUTE_Y: {
+      uint16_t base_addr = addr_absolute(cpu);
+      addr = base_addr + cpu->y;
+      if ((base_addr & 0xFF00) != (addr & 0xFF00)) {
+        cycles_used += 1;
+      }
+      value = mem_read(cpu, addr);
+      cycles_used += 4;
+      break;
+  }
   default:
     printf("Unimplemented addressing mode\n");
     return 0;
   }
 
   cpu->x = lo8(value);
-  return 2;
+  return cycles_used;
+}
+
+uint8_t handler_ldy(CPU *cpu, AddressingMode mode) {
+  uint16_t addr;
+  uint8_t value;
+  uint8_t cycles_used = 0;
+  switch (mode) {
+    case MODE_IMMEDIATE:
+      addr = addr_immediate(cpu);
+      value = mem_read(cpu, addr);
+      cycles_used += 2;
+      break;
+    case MODE_ZEROPAGE:
+      addr = addr_zeropage(cpu);
+      value = mem_read(cpu, addr);
+      cycles_used += 3;
+      break;
+    case MODE_ABSOLUTE:
+      addr = addr_absolute(cpu);
+      value = mem_read(cpu, addr);
+      cycles_used += 3;
+      break;
+    case MODE_ZEROPAGE_X:
+      addr = (addr_zeropage(cpu) + cpu->x) & 0xFF;
+      value = mem_read(cpu, addr);
+      cycles_used += 4;
+      break;
+    case MODE_ABSOLUTE_X: {
+      uint16_t base_addr = addr_absolute(cpu);
+      addr = base_addr + cpu->x;
+      if ((base_addr & 0xFF00) != (addr & 0xFF00)) {
+        cycles_used += 1;
+      }
+      value = mem_read(cpu, addr);
+      cycles_used += 4;
+      break;
+    }
+    default:
+      printf("Unimplemented addressing mode\n");
+      return 0;
+  }
+
+  cpu->x = lo8(value);
+  return cycles_used;
 }
 
 /**
@@ -237,6 +309,50 @@ uint8_t handler_adc(CPU *cpu, AddressingMode mode) {
   return 2;
 }
 
+uint8_t handler_lsr(CPU *cpu, AddressingMode mode) {
+  uint16_t addr;
+  uint8_t value;
+  uint8_t cycles_used = 0;
+  switch (mode) {
+    case MODE_ACCUMULATOR:
+      cpu->a = lsr_op(cpu, cpu->a);
+      cycles_used = 2;
+      break;
+    case MODE_ZEROPAGE:
+      addr = addr_zeropage(cpu);
+      value = mem_read(cpu, addr);
+      value = lsr_op(cpu, value);
+      mem_write(cpu, addr, value);
+      cycles_used = 5;
+    case MODE_ZEROPAGE_X:
+      addr = (addr_zeropage(cpu) + cpu->x) & 0xFF;
+      value = mem_read(cpu, addr);
+      value = lsr_op(cpu, value);
+      mem_write(cpu, addr, value);
+      cycles_used = 6;
+    case MODE_ABSOLUTE:
+      addr = addr_absolute(cpu);
+      value = mem_read(cpu, addr);
+      value = lsr_op(cpu, value);
+      mem_write(cpu, addr, value);
+     cycles_used = 6;
+    case MODE_ABSOLUTE_X:
+      uint16_t base_addr = addr_absolute(cpu);
+      addr = base_addr + cpu->x;
+      if ((base_addr & 0xFF00) != (addr & 0xFF00)) {
+        cycles_used += 1;
+      }
+      value = mem_read(cpu, addr);
+      value = lsr_op(cpu, value);
+      mem_write(cpu, addr, value);
+      cycles_used += 7;
+    default:
+      printf("Unimplemented addressing mode\n");
+      return 0;
+  }
+  return cycles_used;
+}
+
 /**
  * @brief Initializes the instruction table.
  *
@@ -265,6 +381,18 @@ void init_instruction_table() {
       (Instruction){"LDX", handler_ldx, MODE_IMMEDIATE, 2};
   instruction_table[0xA6] = (Instruction){"LDX", handler_ldx, MODE_ZEROPAGE, 3};
   instruction_table[0xAE] = (Instruction){"LDX", handler_ldx, MODE_ABSOLUTE, 4};
+  instruction_table[0xB6] = (Instruction){"LDX", handler_ldx, MODE_ZEROPAGE_Y, 4};
+  instruction_table[0xBE] = (Instruction){"LDX", handler_ldx, MODE_ABSOLUTE_Y, 4};
+  instruction_table[0xA0] = (Instruction){"LDY", handler_ldy, MODE_IMMEDIATE, 2};
+  instruction_table[0xA4] = (Instruction){"LDY", handler_ldy, MODE_ZEROPAGE, 3};
+  instruction_table[0xB4] = (Instruction){"LDY", handler_ldy, MODE_ZEROPAGE_X, 4};
+  instruction_table[0xAC] = (Instruction){"LDY", handler_ldy, MODE_ABSOLUTE, 4};
+  instruction_table[0xBC] = (Instruction){"LDY", handler_ldy, MODE_ABSOLUTE_X, 4};
+  instruction_table[0x4A] = (Instruction){"LSR", handler_lsr, MODE_ACCUMULATOR, 2};
+  instruction_table[0x46] = (Instruction){"LSR", handler_lsr, MODE_ZEROPAGE, 5};
+  instruction_table[0x56] = (Instruction){"LSR", handler_lsr, MODE_ZEROPAGE_X, 6};
+  instruction_table[0x4E] = (Instruction){"LSR", handler_lsr, MODE_ABSOLUTE, 6};
+  instruction_table[0x5E] = (Instruction){"LSR", handler_lsr, MODE_ABSOLUTE_X, 7};
   instruction_table[0x69] =
       (Instruction){"ADC", handler_adc, MODE_IMMEDIATE, 2};
   instruction_table[0x65] = (Instruction){"ADC", handler_adc, MODE_ZEROPAGE, 3};
