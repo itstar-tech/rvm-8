@@ -49,22 +49,22 @@
  * 16-bit address space.
  */
 typedef struct {
-    /** Accumulator (8-bit) */
-    uint8_t a;
-    /** X index register (8-bit) */
-    uint8_t x;
-    /** Y index register (8-bit) */
-    uint8_t y;
-    /** Program counter (16-bit) */
-    uint16_t pc;
-    /** Stack pointer (16-bit) — stack grows downward */
-    uint16_t sp;
-    /** Processor status / flags (8-bit) */
-    uint8_t flags;
-    /** Pointer to the RAM backing store (RVM_MEM_SIZE bytes) */
-    uint8_t *memory;
-    /** Total Cycles*/
-    uint32_t cycles;
+  /** Accumulator (8-bit) */
+  uint8_t a;
+  /** X index register (8-bit) */
+  uint8_t x;
+  /** Y index register (8-bit) */
+  uint8_t y;
+  /** Program counter (16-bit) */
+  uint16_t pc;
+  /** Stack pointer (16-bit) — stack grows downward */
+  uint16_t sp;
+  /** Processor status / flags (8-bit) */
+  uint8_t flags;
+  /** Pointer to the RAM backing store (RVM_MEM_SIZE bytes) */
+  uint8_t *memory;
+  /** Total Cycles*/
+  uint32_t cycles;
 } CPU;
 
 /**
@@ -74,18 +74,18 @@ typedef struct {
  * Each mode has different performance characteristics and use cases.
  */
 typedef enum {
-    MODE_IMMEDIATE,      // LDA #10
-    MODE_ZEROPAGE,       // LDA $00
-    MODE_ABSOLUTE,       // LDA $1234
-    MODE_ZEROPAGE_X,     // LDA $10,X
-    MODE_ABSOLUTE_X,     // LDA $2000,X
-    MODE_ABSOLUTE_Y,     // LDA $2000,Y
-    MODE_INDIRECT,       // JMP ($1234)
-    MODE_INDIRECT_X,     // LDA ($10,X)
-    MODE_INDIRECT_Y,     // LDA ($10),Y
-    MODE_IMPLIED,        // CLC, NOP, INX
-    MODE_ACCUMULATOR,    // ASL A
-    MODE_RELATIVE        // BNE, BEQ
+  MODE_IMMEDIATE,   // LDA #10
+  MODE_ZEROPAGE,    // LDA $00
+  MODE_ABSOLUTE,    // LDA $1234
+  MODE_ZEROPAGE_X,  // LDA $10,X
+  MODE_ABSOLUTE_X,  // LDA $2000,X
+  MODE_ABSOLUTE_Y,  // LDA $2000,Y
+  MODE_INDIRECT,    // JMP ($1234)
+  MODE_INDIRECT_X,  // LDA ($10,X)
+  MODE_INDIRECT_Y,  // LDA ($10),Y
+  MODE_IMPLIED,     // CLC, NOP, INX
+  MODE_ACCUMULATOR, // ASL A
+  MODE_RELATIVE     // BNE, BEQ
 } AddressingMode;
 
 /**
@@ -97,7 +97,6 @@ typedef enum {
  */
 typedef uint8_t (*InstructionHandler)(CPU *cpu, AddressingMode mode);
 
-
 /**
  * @brief Represents a single CPU instruction.
  *
@@ -105,12 +104,11 @@ typedef uint8_t (*InstructionHandler)(CPU *cpu, AddressingMode mode);
  * the addressing mode it uses, and its base cycle count.
  */
 typedef struct {
-    const char *name;
-    InstructionHandler handler;
-    AddressingMode mode;
-    uint8_t cycles;
+  const char *name;
+  InstructionHandler handler;
+  AddressingMode mode;
+  uint8_t cycles;
 } Instruction;
-
 
 extern Instruction instruction_table[256];
 
@@ -130,13 +128,13 @@ void mem_write(CPU *cpu, uint16_t addr, uint8_t val);
  *  ------------------
  */
 enum FLAGS_BITS {
-    FLAG_C = 1 << 0,
-    FLAG_Z = 1 << 1,
-    FLAG_I = 1 << 2,
-    FLAG_D = 1 << 3,
-    FLAG_B = 1 << 4,
-    FLAG_V = 1 << 6,
-    FLAG_N = 1 << 7,
+  FLAG_C = 1 << 0,
+  FLAG_Z = 1 << 1,
+  FLAG_I = 1 << 2,
+  FLAG_D = 1 << 3,
+  FLAG_B = 1 << 4,
+  FLAG_V = 1 << 6,
+  FLAG_N = 1 << 7,
 };
 
 /**
@@ -194,5 +192,7 @@ uint8_t mem_read(CPU *cpu, uint16_t addr);
 void mem_write(CPU *cpu, uint16_t addr, uint8_t val);
 
 void init_instruction_table(void);
+
+static inline uint8_t lo8(int value) { return value & 0xFF; }
 
 #endif
